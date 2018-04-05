@@ -1,0 +1,111 @@
+* Applicative programming with effects
+** Introduction
+
+   #+BEGIN_QUOTE
+   This is the story of a pattern that popped up time and again in our
+   daily work, programming in Haskell, until the temptation to abstract
+   it became irresistible. -- Simon Peyton Jones
+   #+END_QUOTE
+*** /Sequencing commands/
+
+    #+BEGIN_SRC haskell :tangle "./src/sequence.hs"
+sequence :: [IO a] -> IO [a]
+sequence [] = return []
+sequence (c:cs) = do
+  x  <- c
+  xs <- sequence cs
+  return (x:xs)
+    #+END_SRC
+
+    Using the ~ap~ function from the ~Monad~ library:
+
+    #+BEGIN_SRC haskell :tangle "./src/ap.hs"
+ap :: Monad m => m (a -> b) m a -> m b
+ap mf mx = do
+  f <- mf
+  x <- mx
+  return (f x)
+    #+END_SRC
+
+    we could rewrite sequence as:
+
+    #+BEGIN_SRC haskell :tangle "./src/sequence'.hs"
+sequence :: [IO a] -> IO [a]
+sequence []     = return []
+sequence (c:cs) = return (:) `ap` c `ap` sequence cs
+    #+END_SRC
+
+*** Transposing 'matrices'
+
+    #+BEGIN_SRC haskell :tangle "./src/transpose.hs"
+transpose :: [[a]] -> [[a]]
+transpose []       = repeat []
+transpose (xs:xss) = zipWith (:) xs (transpose xss)
+    #+END_SRC
+
+    #+BEGIN_SRC haskell :tangle "./src/repeat.hs"
+repeat :: a -> [a]
+repeat x = x : repeat x
+    #+END_SRC
+
+    #+BEGIN_SRC haskell :tangle "./src/zapp.hs"
+zapp :: [a -> b] -> [a] -> [b]
+zapp (f:fs) (x:xs) = f x : zapp fs xs
+zapp _      _      = []
+    #+END_SRC
+
+    #+BEGIN_SRC haskell :tangle "./src/transpose'.hs"
+transpose :: [[a]] -> [[a]]
+transpose []       = repeat []
+transpose (xs:xss) = repeat (:) `zapp` xs `zapp` transpose xss
+    #+END_SRC
+
+*** Evaluating Expressions
+    #+BEGIN_SRC haskell :tangle "./src/Exp.hs"
+data Exp v = Var v
+           | Val Int
+           | Add (Exp v) (Exp v)
+    #+END_SRC
+
+    #+BEGIN_SRC haskell :tangle "./src/eval.hs"
+eval :: Exp v -> Env v -> Int
+eval (Var x)   e = fetch x e
+eval (Val i)   e = i
+eval (Add p q) e = eval p e + eval q e
+    #+END_SRC
+
+    #+BEGIN_SRC haskell :tangle "./src/eval'.hs"
+eval :: Exp v -> Env v -> Int
+eval (Var x)   e = fetch x e
+# TODO
+    #+END_SRC
+
+** The Applicative class
+
+*** /Typeclass/
+    #+BEGIN_SRC haskell :tangle "./src/applicative.hs"
+class Applicative f where
+  pure  :: a -> f a
+  (<*>) :: f (a -> b) -> f a -> f b
+    #+END_SRC
+
+*** Laws
+    #+BEGIN_SRC text :tangle "./src/laws.txt"
+identity                   pure id <*> u = u
+composition   pure (.) <*> u <*> v <*> w = u <*> (v <*> w)
+homomorphism           pure f <*> pure x = pure (f x)
+interchange                 u <*> pure x = pure (\f -> f x) <*> u
+    #+END_SRC
+
+**** Identity
+**** Composition
+**** Homomorphism
+**** Interchange
+
+** Traversing data structures
+** Monoids are phantom Applicative functors
+** Applicative versus Monad?
+** Applicative functors and Arrows
+** Applicative functors, categorically
+** Conclusions
+** References
