@@ -1,3 +1,5 @@
+#+TITLE: Applicative programming with effects
+#+AUTHOR: Luis Eduardo Bueso
 * Applicative programming with effects
 ** Introduction
 
@@ -8,26 +10,41 @@
    #+END_QUOTE
 *** /Sequencing commands/
 
+    Sequencing commands and collect the results is a very common
+    pattern in programming, in Haskell Prelude we can find the
+    ~sequence~ function which type is:
+
+    #+BEGIN_SRC haskell :tangle "./src/sequence_type.hs"
+sequence :: (Monad m, Traversable t) => t (m a) -> m (t a)
+sequence :: (Monad m) => [m a] -> m [a] -- here spesialising t as list
+sequence :: [IO a] -> IO [a]            -- and then m as IO
+    #+END_SRC
+
+    an example of an implementation of this function could be:
+
     #+BEGIN_SRC haskell :tangle "./src/sequence.hs"
 sequence :: [IO a] -> IO [a]
-sequence [] = return []
+sequence []     = return []
 sequence (c:cs) = do
   x  <- c
   xs <- sequence cs
   return (x:xs)
     #+END_SRC
 
-    Using the ~ap~ function from the ~Monad~ library:
+    The ~Monad~ library provides us a function that will help us to
+    rewrite the ~sequence~ function in a much easier to read version:
+
+    This is the ~ap~ function:
 
     #+BEGIN_SRC haskell :tangle "./src/ap.hs"
-ap :: Monad m => m (a -> b) m a -> m b
+ap :: Monad m => m (a -> b) -> m a -> m b
 ap mf mx = do
   f <- mf
   x <- mx
   return (f x)
     #+END_SRC
 
-    we could rewrite sequence as:
+    and with it we can rewrite sequence as:
 
     #+BEGIN_SRC haskell :tangle "./src/sequence'.hs"
 sequence :: [IO a] -> IO [a]
@@ -35,7 +52,13 @@ sequence []     = return []
 sequence (c:cs) = return (:) `ap` c `ap` sequence cs
     #+END_SRC
 
+    This sequence function is now written in what we will call
+    applicative style.
+
 *** Transposing 'matrices'
+
+    We can think of matrices as somehow lists of lists. A very common
+    operation over matrices is transposition:
 
     #+BEGIN_SRC haskell :tangle "./src/transpose.hs"
 transpose :: [[a]] -> [[a]]
@@ -43,10 +66,19 @@ transpose []       = repeat []
 transpose (xs:xss) = zipWith (:) xs (transpose xss)
     #+END_SRC
 
+    For implementing transposition we use two external functions,
+    ~repeat~ and ~zipWith~.
+
+    ~repeat~ is just a function that takes something and creates an
+    infinite list with it.
+
     #+BEGIN_SRC haskell :tangle "./src/repeat.hs"
 repeat :: a -> [a]
 repeat x = x : repeat x
     #+END_SRC
+
+    If we implement a function ~zapp~ that makes some kind of 'zippy'
+    application:
 
     #+BEGIN_SRC haskell :tangle "./src/zapp.hs"
 zapp :: [a -> b] -> [a] -> [b]
@@ -54,11 +86,16 @@ zapp (f:fs) (x:xs) = f x : zapp fs xs
 zapp _      _      = []
     #+END_SRC
 
+    We can rewrite our transpose function in a very interesting way:
+
     #+BEGIN_SRC haskell :tangle "./src/transpose'.hs"
 transpose :: [[a]] -> [[a]]
 transpose []       = repeat []
 transpose (xs:xss) = repeat (:) `zapp` xs `zapp` transpose xss
     #+END_SRC
+
+    This way of rewriting the ~transpose~ function again leads to a
+    definition in applicative style.
 
 *** Evaluating Expressions
     #+BEGIN_SRC haskell :tangle "./src/Exp.hs"
@@ -80,6 +117,45 @@ eval (Var x)   e = fetch x e
 # TODO
     #+END_SRC
 
+*** Comparison between the functions
+
+    If we take all this functions side by side we can see a pattern,
+    first of all, we will take a look at their types:
+
+    #+BEGIN_SRC haskell :tangle "./src/comparison_types.hs"
+sequence :: [IO a] -> IO [a]
+
+transpose :: [[a]] -> [[a]]
+    #+END_SRC
+
+    and now let's take a look at their implementation:
+
+    #+BEGIN_SRC haskell :tangle "./src/comparison_impl.hs"
+sequence []     = return []
+sequence (c:cs) = return (:) `ap` c `ap` sequence cs
+
+transpose []       = repeat []
+transpose (xs:xss) = repeat (:) `zapp` xs `zapp` transpose xss
+    #+END_SRC
+
+    we see some relation in the application function all of them use,
+    if we look at their types:
+
+    #+BEGIN_SRC haskell :tangle "./src/comparison_types.hs"
+ap :: Monad m => m (a -> b) -> m a -> m b
+zapp ::            [a -> b] -> [a] -> [b]
+    #+END_SRC
+
+    So we can define a more general type for abstracting this kind of
+    computations we can obtain the "apply" function:
+
+    #+BEGIN_SRC haskell :tangle "./src/apply_type.hs"
+(<*>) :: f (a -> b) -> f a -> f b
+    #+END_SRC
+
+    This pattern will lead us to the creation of the ~Applicative~
+    type class, so we can exploit this pattern of computation.
+
 ** The Applicative class
 
 *** /Typeclass/
@@ -87,6 +163,23 @@ eval (Var x)   e = fetch x e
 class Applicative f where
   pure  :: a -> f a
   (<*>) :: f (a -> b) -> f a -> f b
+    #+END_SRC
+
+    We can easily check that applicative functors are indeed functors
+    by implementing the ~fmap~ operation in terms of applicative
+    operations:
+
+    #+BEGIN_SRC haskell :tangle "./src/fmap.hs"
+(<$>) :: Applicative f => (a -> b) -> f a -> f b
+f <$> u = pure f <*> u
+    #+END_SRC
+
+    Any expression built from Applicative combinators can be
+    transformed to a canonical form in which a single pure function is
+    'applied' to the effectful parts in depth-first order:
+
+    #+BEGIN_SRC text :tangle "./src/"
+pure f <*> u1 <*> ... <*> un
     #+END_SRC
 
 *** Laws
