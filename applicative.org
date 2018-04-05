@@ -136,10 +136,10 @@ transpose []       = repeat []
 transpose (xs:xss) = repeat (:) `zapp` xs `zapp` transpose xss
     #+END_SRC
 
-    we see some relation in the application function all of them use,
-    if we look at their types:
+    we can see some relation in the application function all of them
+    use, if we look at their types:
 
-    #+BEGIN_SRC haskell :tangle "./src/comparison_types.hs"
+    #+BEGIN_SRC haskell :tangle "./src/comparison_types_ap.hs"
 ap :: Monad m => m (a -> b) -> m a -> m b
 zapp ::            [a -> b] -> [a] -> [b]
     #+END_SRC
@@ -156,29 +156,74 @@ zapp ::            [a -> b] -> [a] -> [b]
 
 ** The Applicative class
 
-*** /Typeclass/
-    #+BEGIN_SRC haskell :tangle "./src/applicative.hs"
+   #+BEGIN_SRC haskell :tangle "./src/applicative.hs"
 class Applicative f where
   pure  :: a -> f a
   (<*>) :: f (a -> b) -> f a -> f b
-    #+END_SRC
+   #+END_SRC
 
-    We can easily check that applicative functors are indeed functors
-    by implementing the ~fmap~ operation in terms of applicative
-    operations:
+   We can easily check that applicative functors are indeed functors
+   by implementing the ~fmap~ operation in terms of applicative
+   operations:
 
-    #+BEGIN_SRC haskell :tangle "./src/fmap.hs"
+   #+BEGIN_SRC haskell :tangle "./src/fmap.hs"
 (<$>) :: Applicative f => (a -> b) -> f a -> f b
 f <$> u = pure f <*> u
-    #+END_SRC
+   #+END_SRC
 
-    Any expression built from Applicative combinators can be
-    transformed to a canonical form in which a single pure function is
-    'applied' to the effectful parts in depth-first order:
+   Any expression built from Applicative combinators can be
+   transformed to a canonical form in which a single pure function is
+   'applied' to the effectful parts in depth-first order:
 
-    #+BEGIN_SRC text :tangle "./src/"
-pure f <*> u1 <*> ... <*> un
-    #+END_SRC
+   #+BEGIN_SRC text :tangle "./src/canonical.txt"
+pure f <*> u_1 <*> ... <*> u_n
+   #+END_SRC
+
+   We also can transform any monad into an aplicative, we just have
+   to take:
+
+   #+BEGIN_SRC haskell :tangle "./src/to_monad.hs"
+pure  = return
+(<*>) = ap
+
+   #+END_SRC
+
+   Now we will write our ~Applicative~ instance for the previous
+   examples:
+
+   #+BEGIN_SRC haskell :tangle "./src/io_instance"
+#TODO
+   #+END_SRC
+
+   So our function ~sequence~ becomes:
+
+   #+BEGIN_SRC haskell :tangle "./src/sequence_ap.hs"
+sequence :: [IO a] -> IO [a]
+sequence [] = pure []
+sequence (c:cs) = pure (:) <*> c <*> (sequence cs)
+   #+END_SRC
+
+   and
+
+   #+BEGIN_SRC haskell :tangle "./src/transpose_ap.hs"
+transpose :: [[a]] -> [[a]]
+transpose []       = pure []
+transpose (xs:xss) = pure (:) <*> xs <*> (transpose xss)
+   #+END_SRC
+
+   If we implement ~transpose~ like this, with the default instance of
+   ~Applicative []~ , our transpose function will not work because the
+   same way we can have various instances of ~Monoid~ for a type, we
+   can have various instances of ~Applicative~. For this example, we
+   will need the ~Applicative ZipList~ instance instead, from
+   ~Control.Applicative~, because we need an instance that supports
+   "vectorisation". Our instance would be something like this:
+
+   #+BEGIN_SRC haskell :tangle "./src/ListInstance.hs"
+instance Applicative [] where
+  pure  = repeat
+  (<*>) = zapp
+   #+END_SRC
 
 *** Laws
     #+BEGIN_SRC text :tangle "./src/laws.txt"
@@ -192,6 +237,7 @@ interchange                 u <*> pure x = pure (\f -> f x) <*> u
 **** Composition
 **** Homomorphism
 **** Interchange
+*** QuickCheck
 
 ** Traversing data structures
 ** Monoids are phantom Applicative functors
