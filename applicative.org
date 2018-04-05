@@ -1,5 +1,3 @@
-#+TITLE: Applicative programming with effects
-#+AUTHOR: Luis Eduardo Bueso
 * Applicative programming with effects
 ** Introduction
 
