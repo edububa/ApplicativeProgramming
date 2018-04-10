@@ -212,7 +212,7 @@ transpose (xs:xss) = pure (:) <*> xs <*> (transpose xss)
    #+END_SRC
 
    If we implement ~transpose~ like this, with the default instance of
-   ~Applicative []~ , our transpose function will not work because the
+   ~Applicative []~ , our transpose function will not work. The
    same way we can have various instances of ~Monoid~ for a type, we
    can have various instances of ~Applicative~. For this example, we
    will need the ~Applicative ZipList~ instance instead, from
@@ -224,6 +224,9 @@ instance Applicative [] where
   pure  = repeat
   (<*>) = zapp
    #+END_SRC
+
+   It also can be notice that ~repeat~ and ~zapp~ are not the
+   equivalent ~return~ and ~ap~ of any Monad.
 
 *** Laws
     #+BEGIN_SRC text :tangle "./src/laws.txt"
@@ -238,8 +241,126 @@ interchange                 u <*> pure x = pure (\f -> f x) <*> u
 **** Homomorphism
 **** Interchange
 *** QuickCheck
+    To make easier the checking process of this properties in our
+    ~Applicative~ instances we have a ~QuickCheck~ library that help
+    us with this work. This library is called ~Checkers~ and in order
+    to use it we must define two instances:
+
+    #+BEGIN_SRC haskell :tangle "./src/ArbitraryEqClass.hs"
+class Arbitrary a where
+  arbitrary :: Gen a
+
+class EqProp a where
+  (=-=) :: a -> a -> Property
+    #+END_SRC
+
+    once this instances are implemented, you just have to call the
+    function ~quickBatch~ with a trigger data (which is not going to be
+    evaluated). Example:
+
+    #+BEGIN_SRC haskell :tangle "./src/ListInstance.hs"
+trigger = undefined :: Pair (String, Int, Bool)
+
+main :: IO ()
+main = do
+  quickBatch $ applicative trigger
+    #+END_SRC
+
+    #+BEGIN_SRC text :tangle "./src/testOut.txt"
+applicative:
+  identity:     +++ OK, passed 500 tests.
+  composition:  +++ OK, passed 500 tests.
+  homomorphism: +++ OK, passed 500 tests.
+  interchange:  +++ OK, passed 500 tests.
+  functor:      +++ OK, passed 500 tests.
+    #+END_SRC
+
+    As you can tell in the above example before calling the
+    ~quickBatch~ function, we use the ~applicative~ function (located
+    in ~QuickCheck.Classes~) so the testing function knows what kind
+    of test we can perform. We can also use this library to test the
+    laws of our Monoids, Functors and Monads.
 
 ** Traversing data structures
+
+   If we take a look again at ~sequence~ and ~transpose~ and their
+   types:
+
+    #+BEGIN_SRC haskell
+sequence :: [IO a] -> IO [a]
+
+transpose :: [[a]] -> [[a]]
+    #+END_SRC
+
+   we find a common pattern, this is what we call the /applicative
+   distributor/ for lists:
+
+   #+BEGIN_SRC haskell :tangle "./src/dist.hs"
+dist :: Applicative => [f a] -> f [a]
+dist []     = pure []
+dist (v:vs) = pure (:) <*> v <*> (dist vs)
+    #+END_SRC
+
+   that is again the same we have in our /applicative style/
+   implementation of the ~transpose~ and ~sequence~ functions. This
+   ~dist~ function is usually used with 'map', for example here we use
+   it for 'failure-propagation' over a list of inputs:
+
+   #+BEGIN_SRC haskell :tangle "./src/flakyMap.hs"
+flakyMap :: (a -> Maybe b) -> [a] -> Maybe [b]
+flakyMap f ss = dist (fmap f ss)
+    #+END_SRC
+
+   A more general version of this function that only applies ~f~ once
+   is:
+
+   #+BEGIN_SRC haskell :tangle "./src/traverse.hs"
+traverse :: Applicative f => (a -> f b) -> [a] -> f [b]
+traverse f []     = pure []
+traverse f (x:xs) = pure (:) <*> (f x) <*> (traverse f xs)
+    #+END_SRC
+
+   This general pattern is very useful not only for lists, but also
+   for other kind of data structures so lets take a look at the
+   ~Traversable~ type class, that will work like an ~fmap~, capturing
+   functorial data structures, and apply an applicative computation.
+
+   #+BEGIN_SRC haskell :tangle "./src/traversable.hs"
+class Traversable t where
+  traverse :: Applicative f => (a -> f b) -> t a     -> f (t b)
+  dist     :: Applicative f =>               t (f a) -> f (t b)
+  dist     = traverse id
+   #+END_SRC
+
+   If we define an ~Id~ functor we can implement the ~fmap~ function
+   with the ~Traversable~ type class.
+
+#+BEGIN_SRC haskell :tangle "./src/traversable_fmap.h"
+fmap f = an . traverse (An . f)
+#+END_SRC
+
+   where the ~Id~ type would be something like:
+
+#+BEGIN_SRC haskell :tangle "./src/Id.hs"
+newtype Id a = An { an :: a }
+#+END_SRC
+
+   dist-like operators can for regular functors which are datatype
+   constructors with one parameter, constructed by recursive sums of
+   products. Another example of ~Traversable~ functor is ~Tree~:
+
+#+BEGIN_SRC haskell :tangle "./src/Traversable_tree.hs"
+data Tree a = Leaf | Node (Tree a) a (Tree a)
+
+instance Traversable Tree where
+  traverse f Leaf         = pure Leaf
+  traverse f (Node l x r) = pure Node <*> (traverse f l) <*> (f x) <*> (traverse f r)
+#+END_SRC
+
+   In order to have a this ~Traversable Tree~ instance working, we
+   need to implement the ~Functor~, ~Applicative~, and now also
+   ~Foldable~ instances for ~Tree a~.
+
 ** Monoids are phantom Applicative functors
 ** Applicative versus Monad?
 ** Applicative functors and Arrows
