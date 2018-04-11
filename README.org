@@ -1,13 +1,14 @@
 * Applicative programming with effects
 
-  This a little summary of the paper ~Applicative programming with
-  effects~, it also adds some interesting content as ~QuickCheck~
+  This a little summary of the paper /Applicative programming with
+  effects/, it also adds some interesting content as ~QuickCheck~
   libraries to test abstractions in Haskell.
 
-  The slides used in ACM UPM about applicative functors can be found
-  in the folder ~slides~ which contains the ~.tex~ file. If you want
-  the code here presented and used in the presentation yo can generate
-  it just by ~C - c C - v t~ inside Emacs.
+  The slides used in ACM UPM talk about applicative functors can be
+  found in the folder ~slides~ which contains the ~.tex~ file. If you
+  want the code here presented and used in the presentation just
+  create a ~src~ directory in the root of the project and generate it
+  just by ~C - c C - v t~ inside Emacs.
 
 ** Why would you need Applicative functors?
    TODO
@@ -24,7 +25,7 @@
     pattern in programming, in Haskell Prelude we can find the
     ~sequence~ function which type is:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/sequence_type.hs"
+    #+BEGIN_SRC haskell :tangle "./src/sequence_type.hs"
 sequence :: (Monad m, Traversable t) => t (m a) -> m (t a)
 sequence :: (Monad m) => [m a] -> m [a]
 sequence :: [IO a] -> IO [a]
@@ -32,7 +33,7 @@ sequence :: [IO a] -> IO [a]
 
     an example of an implementation of this function could be:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/sequence.hs"
+    #+BEGIN_SRC haskell :tangle "./src/sequence.hs"
 sequence :: [IO a] -> IO [a]
 sequence []     = return []
 sequence (c:cs) = do
@@ -46,7 +47,7 @@ sequence (c:cs) = do
 
     This is the ~ap~ function:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/ap.hs"
+    #+BEGIN_SRC haskell :tangle "./src/ap.hs"
 ap :: Monad m => m (a -> b) -> m a -> m b
 ap mf mx = do
   f <- mf
@@ -56,7 +57,7 @@ ap mf mx = do
 
     and with it we can rewrite sequence as:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/sequence1.hs"
+    #+BEGIN_SRC haskell :tangle "./src/sequence1.hs"
 sequence :: [IO a] -> IO [a]
 sequence []     = return []
 sequence (c:cs) = return (:) `ap` c `ap` sequence cs
@@ -70,7 +71,7 @@ sequence (c:cs) = return (:) `ap` c `ap` sequence cs
     We can think of matrices as somehow lists of lists. A very common
     operation over matrices is transposition:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/transpose.hs"
+    #+BEGIN_SRC haskell :tangle "./src/transpose.hs"
 transpose :: [[a]] -> [[a]]
 transpose []       = repeat []
 transpose (xs:xss) = zipWith (:) xs (transpose xss)
@@ -82,7 +83,7 @@ transpose (xs:xss) = zipWith (:) xs (transpose xss)
     ~repeat~ is just a function that takes something and creates an
     infinite list with it.
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/repeat.hs"
+    #+BEGIN_SRC haskell :tangle "./src/repeat.hs"
 repeat :: a -> [a]
 repeat x = x : repeat x
     #+END_SRC
@@ -90,7 +91,7 @@ repeat x = x : repeat x
     If we implement a function ~zapp~ that makes some kind of 'zippy'
     application:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/zapp.hs"
+    #+BEGIN_SRC haskell :tangle "./src/zapp.hs"
 zapp :: [a -> b] -> [a] -> [b]
 zapp (f:fs) (x:xs) = f x : zapp fs xs
 zapp _      _      = []
@@ -98,7 +99,7 @@ zapp _      _      = []
 
     We can rewrite our transpose function in a very interesting way:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/transpose1.hs"
+    #+BEGIN_SRC haskell :tangle "./src/transpose1.hs"
 transpose :: [[a]] -> [[a]]
 transpose []       = repeat []
 transpose (xs:xss) = repeat (:) `zapp` xs `zapp` transpose xss
@@ -112,7 +113,7 @@ transpose (xs:xss) = repeat (:) `zapp` xs `zapp` transpose xss
     If we take all this functions side by side we can see a pattern,
     first of all, we will take a look at their types:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/comparison_types.hs"
+    #+BEGIN_SRC haskell :tangle "./src/comparison_types.hs"
 sequence :: [IO a] -> IO [a]
 
 transpose :: [[a]] -> [[a]]
@@ -120,7 +121,7 @@ transpose :: [[a]] -> [[a]]
 
     and now let's take a look at their implementation:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/comparison_impl.hs"
+    #+BEGIN_SRC haskell :tangle "./src/comparison_impl.hs"
 sequence []     = return []
 sequence (c:cs) = return (:) `ap` c `ap` sequence cs
 
@@ -131,7 +132,7 @@ transpose (xs:xss) = repeat (:) `zapp` xs `zapp` transpose xss
     we can see some relation in the application function all of them
     use, if we look at their types:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/comparison_types_ap.hs"
+    #+BEGIN_SRC haskell :tangle "./src/comparison_types_ap.hs"
 ap :: Monad m => m (a -> b) -> m a -> m b
 zapp ::            [a -> b] -> [a] -> [b]
     #+END_SRC
@@ -139,7 +140,7 @@ zapp ::            [a -> b] -> [a] -> [b]
     So we can define a more general type for abstracting this kind of
     computations we can obtain the "apply" function:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/apply_type.hs"
+    #+BEGIN_SRC haskell :tangle "./src/apply_type.hs"
 (<*>) :: f (a -> b) -> f a -> f b
     #+END_SRC
 
@@ -148,7 +149,7 @@ zapp ::            [a -> b] -> [a] -> [b]
 
 ** The Applicative class
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/applicative.hs"
+   #+BEGIN_SRC haskell :tangle "./src/applicative.hs"
 class Applicative f where
   pure  :: a -> f a
   (<*>) :: f (a -> b) -> f a -> f b
@@ -158,7 +159,7 @@ class Applicative f where
    by implementing the ~fmap~ operation in terms of applicative
    operations:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/fmap.hs"
+   #+BEGIN_SRC haskell :tangle "./src/fmap.hs"
 (<$>) :: Applicative f => (a -> b) -> f a -> f b
 f <$> u = pure f <*> u
    #+END_SRC
@@ -167,14 +168,14 @@ f <$> u = pure f <*> u
    transformed to a canonical form in which a single pure function is
    'applied' to the effectful parts in depth-first order:
 
-   #+BEGIN_SRC text :tangle "./slides/src/canonical.txt"
+   #+BEGIN_SRC text :tangle "./src/canonical.txt"
 pure f <*> u_1 <*> ... <*> u_n
    #+END_SRC
 
    We also can transform any monad into an aplicative, we just have
    to take:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/to_monad.hs"
+   #+BEGIN_SRC haskell :tangle "./src/to_monad.hs"
 pure  = return
 (<*>) = ap
 
@@ -183,7 +184,7 @@ pure  = return
    Now we will write our ~Applicative~ instance for the previous
    examples:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/io_instance.hs"
+   #+BEGIN_SRC haskell :tangle "./src/io_instance.hs"
 instance Applicative IO where
   pure  = return
   (<*>) = ap
@@ -191,7 +192,7 @@ instance Applicative IO where
 
    So our function ~sequence~ becomes:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/sequence_ap.hs"
+   #+BEGIN_SRC haskell :tangle "./src/sequence_ap.hs"
 sequence :: [IO a] -> IO [a]
 sequence []     = pure []
 sequence (c:cs) = pure (:) <*> c <*> (sequence cs)
@@ -199,7 +200,7 @@ sequence (c:cs) = pure (:) <*> c <*> (sequence cs)
 
    and
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/transpose_ap.hs"
+   #+BEGIN_SRC haskell :tangle "./src/transpose_ap.hs"
 transpose :: [[a]] -> [[a]]
 transpose []       = pure []
 transpose (xs:xss) = pure (:) <*> xs <*> (transpose xss)
@@ -213,7 +214,7 @@ transpose (xs:xss) = pure (:) <*> xs <*> (transpose xss)
    ~Control.Applicative~, because we need an instance that supports
    "vectorisation". Our instance would be something like this:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/ListInstance.hs"
+   #+BEGIN_SRC haskell :tangle "./src/ListInstance.hs"
 instance Applicative [] where
   pure  = repeat
   (<*>) = zapp
@@ -223,7 +224,7 @@ instance Applicative [] where
    equivalent ~return~ and ~ap~ of any ~Monad~.
 
 *** Laws
-    #+BEGIN_SRC text :tangle "./slides/src/laws.txt"
+    #+BEGIN_SRC text :tangle "./src/laws.txt"
 identity                   pure id <*> u = u
 composition   pure (.) <*> u <*> v <*> w = u <*> (v <*> w)
 homomorphism           pure f <*> pure x = pure (f x)
@@ -236,7 +237,7 @@ interchange                 u <*> pure x = pure (\f -> f x) <*> u
     us with this work. This library is called ~Checkers~ and in order
     to use it we must define two instances:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/ArbitraryEqClass.hs"
+    #+BEGIN_SRC haskell :tangle "./src/ArbitraryEqClass.hs"
 class Arbitrary a where
   arbitrary :: Gen a
 
@@ -248,7 +249,7 @@ class EqProp a where
     function ~quickBatch~ with a trigger data (which is not going to be
     evaluated). Example:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/trigger.hs"
+    #+BEGIN_SRC haskell :tangle "./src/trigger.hs"
 trigger = undefined :: Pair (String, Int, Bool)
 
 main :: IO ()
@@ -256,7 +257,7 @@ main = do
   quickBatch $ applicative trigger
     #+END_SRC
 
-    #+BEGIN_SRC text :tangle "./slides/src/testOut.txt"
+    #+BEGIN_SRC text :tangle "./src/testOut.txt"
 applicative:
   identity:     +++ OK, passed 500 tests.
   composition:  +++ OK, passed 500 tests.
@@ -276,7 +277,7 @@ applicative:
    If we take a look again at ~sequence~ and ~transpose~ and their
    types:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/trav_typ.hs"
+   #+BEGIN_SRC haskell :tangle "./src/trav_typ.hs"
 sequence :: [IO a] -> IO [a]
 
 transpose :: [[a]] -> [[a]]
@@ -285,7 +286,7 @@ transpose :: [[a]] -> [[a]]
    we find a common pattern, this is what we call the /applicative
    distributor/ for lists:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/dist.hs"
+   #+BEGIN_SRC haskell :tangle "./src/dist.hs"
 dist :: Applicative => [f a] -> f [a]
 dist []     = pure []
 dist (v:vs) = pure (:) <*> v <*> (dist vs)
@@ -296,7 +297,7 @@ dist (v:vs) = pure (:) <*> v <*> (dist vs)
    ~dist~ function is usually used with 'map', for example here we use
    it for 'failure-propagation' over a list of inputs:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/flakyMap.hs"
+   #+BEGIN_SRC haskell :tangle "./src/flakyMap.hs"
 flakyMap :: (a -> Maybe b) -> [a] -> Maybe [b]
 flakyMap f ss = dist (fmap f ss)
    #+END_SRC
@@ -304,7 +305,7 @@ flakyMap f ss = dist (fmap f ss)
    A more general version of this function that only applies ~f~ once
    is:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/traverse.hs"
+   #+BEGIN_SRC haskell :tangle "./src/traverse.hs"
 traverse :: Applicative f => (a -> f b) -> [a] -> f [b]
 traverse f []     = pure []
 traverse f (x:xs) = pure (:) <*> (f x) <*> (traverse f xs)
@@ -315,7 +316,7 @@ traverse f (x:xs) = pure (:) <*> (f x) <*> (traverse f xs)
    ~Traversable~ type class, that will work like an ~fmap~, capturing
    functorial data structures, and apply an applicative computation.
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/traversable.hs"
+   #+BEGIN_SRC haskell :tangle "./src/traversable.hs"
 class Traversable t where
   traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
   dist     :: Applicative f => t (f a) -> f (t b)
@@ -325,13 +326,13 @@ class Traversable t where
    If we define an ~Id~ functor we can implement the ~fmap~ function
    with the ~Traversable~ type class.
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/traversable_fmap.hs"
+   #+BEGIN_SRC haskell :tangle "./src/traversable_fmap.hs"
 fmap f = an . traverse (An . f)
    #+END_SRC
 
    where the ~Id~ type would be something like:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/Id.hs"
+   #+BEGIN_SRC haskell :tangle "./src/Id.hs"
 newtype Id a = An { an :: a }
    #+END_SRC
 
@@ -340,7 +341,7 @@ newtype Id a = An { an :: a }
    sums of products. Another example of ~Traversable~ functor is
    ~Tree~:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/Traversable_tree.hs"
+   #+BEGIN_SRC haskell :tangle "./src/Traversable_tree.hs"
 data Tree a = Leaf | Node (Tree a) a (Tree a)
 
 instance Traversable Tree where
@@ -356,7 +357,7 @@ instance Traversable Tree where
 
    The ~Monoid~ class is just:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/Monoid.hs"
+   #+BEGIN_SRC haskell :tangle "./src/Monoid.hs"
 class Monoid o where
   mempty :: o
   (<>)   :: o -> o -> o -- also called "mappend"
@@ -366,14 +367,14 @@ class Monoid o where
    monoids, numeric types, lists, booleans... Every monoid also
    induces an applicative functor, but in a particular way:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/Accy.hs"
+   #+BEGIN_SRC haskell :tangle "./src/Accy.hs"
 newtype Accy o a = Acc { acc :: o }
    #+END_SRC
 
    So if we have a monoid that can have that structure, this can lead
    to an applicative functor that accumulates computations:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/Monoid_applicative.hs"
+   #+BEGIN_SRC haskell :tangle "./src/Monoid_applicative.hs"
 instance Monoid o => Applicative (Accy o) where
   pure _              = Acc mempty
   (Acc x) <*> (Acc y) = Acc (x <> y)
@@ -381,7 +382,7 @@ instance Monoid o => Applicative (Accy o) where
 
    This accumulation can be seen as just a special kind of traversal:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/acc_red.hs"
+   #+BEGIN_SRC haskell :tangle "./src/acc_red.hs"
 accumulate :: (Traversable t, Monoid o) => (a -> o) -> t a -> o
 accumulate f = acc . traverse (Acc . f)
 
@@ -392,7 +393,7 @@ reduce = accumulate id
    With this monoid instance we get operations as ~flatten~ and
    ~concat~ nearly for free!
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/flatten_concat_monoid.hs"
+   #+BEGIN_SRC haskell :tangle "./src/flatten_concat_monoid.hs"
 flatten :: Tree a -> [a]    -- our Tree data type will need a
 flatten = accumulate (:[])  -- Monoid and Traversable instance
 
@@ -415,7 +416,7 @@ concat = reduce
 
    we can see that the bind operator:
 
-#+BEGIN_SRC haskell :tangle "./slides/src/bind.hs"
+#+BEGIN_SRC haskell :tangle "./src/bind.hs"
 (>>=) :: ma -> (a m b) -> m b
 #+END_SRC
 
@@ -428,7 +429,7 @@ TODO
 
     Applicative functors are easier to compose than monads
 
-#+BEGIN_SRC haskell :tangle "./slides/src/composition.hs"
+#+BEGIN_SRC haskell :tangle "./src/composition.hs"
 newtype (f :.: g) a = Comp { comp :: (f (g a))}
 
 instance (Applicative f, Applicative g) => Applicative (f :.: g) where
@@ -447,7 +448,7 @@ TODO
 
     We will define a type to model exceptions:
 
-#+BEGIN_SRC haskell :tangle "./slides/src/Except.hs"
+#+BEGIN_SRC haskell :tangle "./src/Except.hs"
 data Except err a = OK a | Failed err
 #+END_SRC
 
@@ -455,7 +456,7 @@ data Except err a = OK a | Failed err
     computation fails, however we can define the ~Applicative~
     instance as:
 
-#+BEGIN_SRC haskell :tangle "./slides/src/ExceptApplicative.hs"
+#+BEGIN_SRC haskell :tangle "./src/ExceptApplicative.hs"
 instance Monoid err => Applicative (Except err) where
   pure                           = OK
   (OK f) <*> (OK x)              = OK (f x)
