@@ -25,7 +25,7 @@
   lbueso@acm.org
 }
 \graphicspath{{./pics}}
-\institute{ACM}
+\institute{ACM UPM}
 \titlegraphic{
   \hfill\includegraphics[height=1.5cm]{pics/logo_acm_cromo.png}
   % \includegraphics[height=1.5cm]{pics/sig_plig.png}
@@ -43,7 +43,14 @@
 \section{Why would you need Applicative functors?}
 
 \begin{frame}
-  TODO
+  When we are dealing with functors sometimes we have this kind of
+  structure:
+
+  \inputminted{text}{../src/intro.txt}
+
+  when we find a type like this:
+
+  \inputminted{haskell}{../src/intro_type.hs}
 \end{frame}
 
 \section{Introduction}
@@ -300,11 +307,56 @@
 \section{Applicative versus Monad}
 
 \begin{frame}{Applicative versus Monad}
-  TODO
+  We have already seen how we every \verb~Monad~ can be made
+  \verb~Applicative~:
+
+  \inputminted{haskell}{../src/to_monad.hs}
+
+  However there exists more \verb~Applicative~ functors than
+  \verb~Monads~.
+
+  This is because \verb~Monads~ are more powerful than
+  \verb~Applicative~!
+
+  If we take a look at the \verb~bind~ operator:
+
+  \inputminted{haskell}{../src/bind.hs}
+
+  We can see that it can have an effect on the next computation, while
+  \verb~<*>~ just can't.
+
+\end{frame}
+
+\begin{frame}{Applicative versus Monad}
+  Let's take a look at an example:
+
+  \inputminted{haskell}{../src/miffy_monad.hs}
+
+  \inputminted{haskell}{../src/iffy_ap.hs}
+
+  If we call this functions like this:
+
+  \inputminted{text}{../src/iffy.txt}
+
+  What is going on?
+
 \end{frame}
 
 \begin{frame}{Composing applicative functors}
-  TODO
+  \verb~Applicative~ functors are easier to compose than
+  \verb~Monads~.
+
+  If we define a data type \verb~:.:~ to compose \verb~Applicative~,
+  we get:
+
+  \inputminted{haskell}{"../src/composition.hs"}
+
+  So we can tell that composing two \verb~Applicative~ functors also
+  give us an \verb~Applicative~ functor.
+
+  But when we compose two monads we at least get an \verb~Applicative~
+  functor.
+
 \end{frame}
 
 \begin{frame}{Accumulating exceptions}
@@ -321,9 +373,45 @@
   \verb~Monoid~
 \end{frame}
 
-
-
 % \section{Applicative functors, categorically}
-% \section{Conclusions}
+\section{Conclusions}
+
+\begin{frame}{Conclusions}
+  We have identified \verb~Applicative~ functors. We saw that every
+  \verb~Monad~ is also an \verb~Applicative~ functor.
+
+  We also analysed the pattern that will give us the notion of how
+  \verb~Applicative~ functors are created, and how to distinguish them
+  in terms of types.
+
+  We have seen \verb~Applicative~ functors laws the ~Checkers~ library
+  to test our abstractions laws.
+
+  We have made an abstraction over \verb~Applicative~ functors which
+  is ~Traversable~ functors.
+
+  We have defined monoids in terms of \verb~Applicative~ functors.
+
+  We have compared them with ~Monads~.
+\end{frame}
+
+\appendix
+
+\begin{frame}{References}
+
+  \textit{Applicative programming with effects}
+  \href{http://www.staff.city.ac.uk/~ross/papers/Applicative.html}{\beamergotobutton{Link}}
+
+  \textit{Haskell Book}
+  \href{http://haskellbook.com/}{\beamergotobutton{Link}}
+
+  \textit{Category Theory for Programmers}
+  \href{https://bartoszmilewski.com/2014/10/28/category-theory-for-programmers-the-preface/}{\beamergotobutton{Link}} %
+
+\end{frame}
+
+\begin{frame}[standout]
+  Questions?
+\end{frame}
 
 \end{document}

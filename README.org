@@ -4,15 +4,35 @@
   effects/, it also adds some interesting content as ~QuickCheck~
   libraries to test abstractions in Haskell.
 
-  The slides used in ACM UPM talk about applicative functors can be
-  found in the folder ~slides~ which contains the ~.tex~ file. If you
-  want the code here presented and used in the presentation just
-  create a ~src~ directory in the root of the project and generate it
-  just by ~C - c C - v t~ inside Emacs.
+  The slides used in the ACM UPM talk about applicative functors can
+  be found in the folder ~slides~ which contains the ~.tex~ file and
+  the slides in ~PDF~ format. If you want the code here presented and
+  used in the presentation just create a ~src~ directory in the root
+  of the project and generate it just by ~C - c C - v t~ inside Emacs.
 
 ** Why would you need Applicative functors?
 
-   TODO
+   When we are dealing with functors sometimes we have this kind of
+   structure:
+
+   #+BEGIN_SRC text :tangle "./src/intro.txt"
+Prelude> f a b c = a + b + c
+Prelude> :t f <$> [1,2,3]
+f <$> [1,2,3] :: Num a => [a -> a -> a]
+Prelude> :t f <$> [1,2,3]
+f <$> [1,2,3] :: Num a => [a -> a -> a]
+Prelude>
+   #+END_SRC
+
+   When we find a type like this:
+
+#+BEGIN_SRC haskell :tangle "./src/intro_type.hs"
+t :: f (a -> b)
+#+END_SRC
+
+   What we usually need to compute it is an ~Applicative~ functor.
+
+   Let's see what an ~Applicative~ functor is and how can we use it!
 
 ** Introduction
 
@@ -418,59 +438,86 @@ concat = reduce
 
    we can see that the bind operator:
 
-#+BEGIN_SRC haskell :tangle "./src/bind.hs"
+   #+BEGIN_SRC haskell :tangle "./src/bind.hs"
 (>>=) :: ma -> (a m b) -> m b
-#+END_SRC
+   #+END_SRC
 
    can have an effect on the next computation, whereas ~<*>~ just keep
    the computation fixed, sequencing effects.
 
-TODO
+   Let's take a look at an example:
+
+   #+BEGIN_SRC haskell :tangle "./src/miffy_monad.hs"
+miffy :: Monad m => m Bool -> m a -> m a -> m a
+miffy mb mt me = do
+  b <- mb
+  if b then mt else me
+   #+END_SRC
+
+   #+BEGIN_SRC haskell :tangle "./src/iffy_ap.hs"
+iffy :: Applicative f => f Bool -> f a -> f a -> f a
+iffy fb ft fe = pure cond <*> fb <*> ft <*> fe
+  where cond b t e = if b then t else e
+   #+END_SRC
+
+   The difference between this examples is that the ~Monad~ one
+   sequence its effects while the ~Applicative~ one does not.
+
+   The problem of this is that if we call the functions with:
+
+   #+BEGIN_SRC text :tangle "./src/iffy.txt"
+iffy (pure True) (pure t) Nothing = Nothing
+
+miffy (return True) (return t) Nothing = return t
+   #+END_SRC
+
+   The difference is that the ~Monad~ implementation choose
+   computations and performs only one of them, while the ~Applicative~
+   performs all the effects and then chooses a value.
 
 *** Composing applicative functors
 
-    Applicative functors are easier to compose than monads
+    ~Applicative~ functors are easier to compose than ~Monads~.
 
-#+BEGIN_SRC haskell :tangle "./src/composition.hs"
+    #+BEGIN_SRC haskell :tangle "./src/composition.hs"
 newtype (f :.: g) a = Comp { comp :: (f (g a))}
 
-instance (Applicative f, Applicative g) => Applicative (f :.: g) where
+instance (Applicative f, Applicative g) =>
+                             Applicative (f :.: g) where
   pure x                  = Comp pure <*> (pure x)
   (Comp fs) <*> (Comp xs) = Comp pure (<*>) fs xs
-#+END_SRC
+    #+END_SRC
 
     So the composition of two applicatives is also an
     aplicative. While this does not happen with Monads, what we
     certainly get is, if we compose two monads we get at least an
-    Applicative.
-
-TODO
+    ~Applicative~.
 
 *** Accumulating exceptions
 
     We will define a type to model exceptions:
 
-#+BEGIN_SRC haskell :tangle "./src/Except.hs"
+    #+BEGIN_SRC haskell :tangle "./src/Except.hs"
 data Except err a = OK a | Failed err
-#+END_SRC
+    #+END_SRC
 
     If we use a ~Monad~ instance for this, it will abort once the
     computation fails, however we can define the ~Applicative~
     instance as:
 
-#+BEGIN_SRC haskell :tangle "./src/ExceptApplicative.hs"
+    #+BEGIN_SRC haskell :tangle "./src/ExceptApplicative.hs"
 instance Monoid err => Applicative (Except err) where
   pure                           = OK
   (OK f) <*> (OK x)              = OK (f x)
   (OK f) <*> (Failed err)        = Failed err
   (Failed err) <*> (OK x)        = Failed err
   (Failed err) <*> (Failed err') = Failed (err <> err')
-#+END_SRC
+    #+END_SRC
 
     so in this way we can collect errors using the list monoid for
     example.
 
-** Applicative functors, categorically
+    # ** Applicative functors, categorically
 ** Conclusions
 
    We have identified ~Applicative~ functors. We saw that every
