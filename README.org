@@ -11,7 +11,9 @@
   just by ~C - c C - v t~ inside Emacs.
 
 ** Why would you need Applicative functors?
+
    TODO
+
 ** Introduction
 
    #+BEGIN_QUOTE
@@ -470,4 +472,30 @@ instance Monoid err => Applicative (Except err) where
 
 ** Applicative functors, categorically
 ** Conclusions
+
+   We have identified ~Applicative~ functors. We saw that every
+   ~Monad~ is also an ~Applicative~ functor.
+
+   We also analysed the pattern that will give us the notion of how
+   ~Applicative~ functors are created, and how to distinguish them in
+   terms of types.
+
+   We have seen ~Applicative~ functors laws the ~Checkers~ library to
+   test our abstractions laws.
+
+   We have made an abstraction over ~Applicative~ functors which is
+   ~Traversable~ functors.
+
+   We have defined monoids in terms of ~Applicative~ functors.
+
+   We have compared them with ~Monads~.
+
 ** References
+
+   - [[http://www.staff.city.ac.uk/~ross/papers/Applicative.html][Applicative programming with effects]]
+
+   - [[http://haskellbook.com/][Haskell Book]]
+
+   - [[https://acmupm.es/][ACM UPM]]
+
+   - [[https://bartoszmilewski.com/2014/10/28/category-theory-for-programmers-the-preface/][Category Theory for Programmers]]
