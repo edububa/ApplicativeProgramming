@@ -24,7 +24,7 @@
   Luis Eduardo Bueso de Barrio\\
   lbueso@acm.org
 }
-\graphicspath{{./pics/}{../resources/}}
+\graphicspath{{./pics}}
 \institute{ACM PLIG}
 \titlegraphic{
   \hfill\includegraphics[height=1.5cm]{pics/logo_acm_cromo.png}
@@ -34,5 +34,267 @@
 \begin{document}
 
 \maketitle
+
+\begin{frame}{Contents}
+  \setbeamertemplate{section in toc}[sections numbered]
+  \tableofcontents[hideallsubsections]
+\end{frame}
+
+\section{Why would you need Applicative functors?}
+
+\section{Introduction}
+
+\begin{frame}{Introduction}
+  \begin{quote}
+    This is the story of a pattern that popped up time and again in our
+    daily work, programming in Haskell, until the temptation to abstract
+    it became irresistible. -- Simon Peyton Jones
+  \end{quote}
+\end{frame}
+
+\begin{frame}{Sequencing commands}
+  Sequencing commands and collect the results is a very common
+  pattern.
+
+  \inputminted{haskell}{./src/sequence_type.hs}
+
+  Let's take a look at some implementations for this pattern.
+\end{frame}
+
+\begin{frame}{Sequencing commands}
+  If we implement this sequence operator for the \verb~IO~ we will get
+  something like this using do-notation:
+
+  \inputminted{haskell}{./src/sequence.hs}
+\end{frame}
+
+\begin{frame}{Sequencing commands}
+  We will rewrite it using the \verb~ap~ function from the
+  \verb~Monad~ library.
+
+  \inputminted{haskell}{./src/ap.hs}
+
+  So we get something like this:
+
+  \inputminted{haskell}{./src/sequence1.hs}
+\end{frame}
+
+\begin{frame}{Transposing 'matrices'}
+  If we model matrices as lists of lists, we can implement
+  transposition as:
+
+  \inputminted{haskell}{./src/transpose.hs}
+
+  The \verb~repeat~ function is just:
+
+  \inputminted{haskell}{./src/repeat.hs}
+\end{frame}
+
+\begin{frame}{Transposing 'matrices'}
+  If we implement some \verb~zapp~ function like this:
+
+  \inputminted{haskell}{./src/zapp.hs}
+
+  We can rewrite transpose as:
+
+  \inputminted{haskell}{./src/transpose1.hs}
+\end{frame}
+
+\begin{frame}{Comparison between the functions}
+  So let's take a look at their types:
+
+  \inputminted{haskell}{./src/comparison_types.hs}
+
+  and their implementation:
+
+  \inputminted{haskell}{./src/comparison_impl.hs}
+\end{frame}
+
+\begin{frame}{Comparison between the functions}
+  We can see a relation in the ``application'' function:
+
+  \inputminted{haskell}{./src/comparison_types_ap.hs}
+
+  So we can create an abstraction of this operation called ``apply''
+  which will be the function:
+
+  \inputminted{haskell}{./src/apply_type.hs}
+
+  All this patterns will lead us to the creation of the
+  \verb~Applicative~ type class.
+\end{frame}
+
+\section{The Applicative class}
+
+\begin{frame}{The Applicative class}
+
+  \inputminted{haskell}{./src/applicative.hs}
+
+  We can check that applicative functors are functors by implementing
+  \verb~fmap~:
+
+  \inputminted{haskell}{./src/fmap.hs}
+\end{frame}
+
+\begin{frame}{The Applicative class}
+
+  Any expression can be transformed to ``canonical form''
+
+  \inputminted{text}{./src/canonical.txt}
+
+  We can transform any monad into an applicative just with:
+
+  \inputminted{haskell}{./src/to_monad.hs}
+\end{frame}
+
+\begin{frame}{The Applicative class}
+  An \verb~Applicative~ instance for \verb~IO~ would be:
+
+  \inputminted{haskell}{./src/io_instance.hs}
+
+  So our \verb~sequence~ function becomes:
+
+  \inputminted{haskell}{./src/sequence_ap.hs}
+\end{frame}
+
+\begin{frame}{The Applicative class}
+  The same way we have various instances of \verb~Monoid~ for a type,
+  we have various of \verb~Applicative~.
+
+  In our list example we need the \verb~Applicative ZipList~ instance:
+
+  \inputminted{haskell}{./src/ListInstance.hs}
+
+  So our \verb~transpose~ function becomes:
+
+  \inputminted{haskell}{./src/transpose_ap.hs}
+
+  It must be notice that \verb~repeat~ are not the \verb~return~ and
+  \verb~ap~ equivalents of any \verb~Monad~.
+
+\end{frame}
+
+\begin{frame}{Applicative laws}
+  \begin{itemize}
+  \item Identity\\
+    \verb~pure id <*> u = u~
+  \item Composition\\
+    \verb~pure (.) <*> u <*> v <*> w = u <*> (v <*> w)~
+  \item Homomorphism\\
+    \verb~pure f <*> pure x = pure (f x)~
+  \item Interchange
+    % \verb~u <*> pure x = pure (\f -> f x) <*> u~
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{QuickCheck}
+
+  \verb~QuickCheck~ can help us writing correct \verb~Applicative~
+  functors using \verb~Checkers~
+
+  In order to use it we must implement two instances:
+
+  \inputminted{haskell}{./src/ArbitraryEqClass.hs}
+
+  And to make the test we just need to:
+
+  \inputminted{haskell}{./src/trigger.hs}
+\end{frame}
+
+\begin{frame}[standout]
+  \Fontvi
+  \inputminted{text}{./src/testOut.txt}
+\end{frame}
+
+\section{Traversing data structures}
+
+\begin{frame}{Traversing data structures}
+  Let's take a look at \verb~sequence~ and \verb~transpose~ types
+  again:
+
+  \inputminted{haskell}{./src/trav_typ.hs}
+
+  This common pattern is called \textit{applicative distributor} for
+  lists:
+
+  \inputminted{haskell}{./src/dist.hs}
+
+  This is again in \textit{applicative style}.
+\end{frame}
+
+\begin{frame}{Traversing data structures}
+  This is usually used with \verb~map~, for example here we use it for
+  ``failure propagation'':
+
+  \inputminted{haskell}{./src/flakyMap.hs}
+
+  We can implement a generalization of this:
+
+  \inputminted{haskell}{./src/traverse.hs}
+\end{frame}
+
+\begin{frame}{Traversing data structures}
+  This pattern is very useful so we can abstract in a type class:
+
+  \inputminted{haskell}{./src/traversable.hs}
+
+  If we implement an \verb~Id~ type like:
+
+  \inputminted{haskell}{./src/Id.hs}
+
+  We can implement \verb~fmap~ very easily:
+
+  \inputminted{haskell}{./src/traversable_fmap.hs}
+
+\end{frame}
+
+\begin{frame}{Traversing data structures}
+  Another interesting \verb~Traversable~ instance is:
+
+  \inputminted{haskell}{./src/Traversable_tree.hs}
+
+  In the latest \verb~GHC~ we need \verb~Functor~, \verb~Applicative~
+  and also \verb~Foldable~ in order to have a \verb~Traversable~
+  instance.
+\end{frame}
+
+\section{Monoids are phantom Applicative functors}
+
+\begin{frame}{Monoids are phantom Applicative functors}
+  As we know the \verb~Monoid~ is just:
+
+  \inputminted{haskell}{./src/Monoid.hs}
+
+  Monoids are very useful in functional programming, we have them in
+  numeric types, lists, booleans... And every monoid also induces an
+  applicative functor!
+
+\end{frame}
+
+\begin{frame}{Monoids are phantom Applicative functors}
+  If we define:
+
+  \inputminted{haskell}{./src/Accy.hs}
+
+  We can implement an applicative functor that accumulates
+  computations:
+
+  \inputminted{haskell}{./src/Monoid_applicative.hs}
+\end{frame}
+
+\begin{frame}{Monoids are phantom Applicative functors}
+  This accumulation can be seen as a special kind of traversal:
+
+  \inputminted{haskell}{./src/acc_red.hs}
+
+  With this monoid instance we get operations like \verb~flatten~ and
+  \verb~concat~ nearly for free!
+
+  \inputminted{haskell}{./src/flatten_concat_monoid.hs}
+\end{frame}
+
+% \section{Applicative versus Monad}
+% \section{Applicative functors, categorically}
+% \section{Conclusions}
 
 \end{document}

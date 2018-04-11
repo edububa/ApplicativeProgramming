@@ -10,6 +10,7 @@
   it just by ~C - c C - v t~ inside Emacs.
 
 ** Why would you need Applicative functors?
+   TODO
 ** Introduction
 
    #+BEGIN_QUOTE
@@ -25,8 +26,8 @@
 
     #+BEGIN_SRC haskell :tangle "./slides/src/sequence_type.hs"
 sequence :: (Monad m, Traversable t) => t (m a) -> m (t a)
-sequence :: (Monad m) => [m a] -> m [a] -- here spesialising t as list
-sequence :: [IO a] -> IO [a]            -- and then m as IO
+sequence :: (Monad m) => [m a] -> m [a]
+sequence :: [IO a] -> IO [a]
     #+END_SRC
 
     an example of an implementation of this function could be:
@@ -55,7 +56,7 @@ ap mf mx = do
 
     and with it we can rewrite sequence as:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/sequence'.hs"
+    #+BEGIN_SRC haskell :tangle "./slides/src/sequence1.hs"
 sequence :: [IO a] -> IO [a]
 sequence []     = return []
 sequence (c:cs) = return (:) `ap` c `ap` sequence cs
@@ -97,7 +98,7 @@ zapp _      _      = []
 
     We can rewrite our transpose function in a very interesting way:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/transpose'.hs"
+    #+BEGIN_SRC haskell :tangle "./slides/src/transpose1.hs"
 transpose :: [[a]] -> [[a]]
 transpose []       = repeat []
 transpose (xs:xss) = repeat (:) `zapp` xs `zapp` transpose xss
@@ -182,7 +183,7 @@ pure  = return
    Now we will write our ~Applicative~ instance for the previous
    examples:
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/io_instance"
+   #+BEGIN_SRC haskell :tangle "./slides/src/io_instance.hs"
 instance Applicative IO where
   pure  = return
   (<*>) = ap
@@ -192,7 +193,7 @@ instance Applicative IO where
 
    #+BEGIN_SRC haskell :tangle "./slides/src/sequence_ap.hs"
 sequence :: [IO a] -> IO [a]
-sequence [] = pure []
+sequence []     = pure []
 sequence (c:cs) = pure (:) <*> c <*> (sequence cs)
    #+END_SRC
 
@@ -219,7 +220,7 @@ instance Applicative [] where
    #+END_SRC
 
    It also can be notice that ~repeat~ and ~zapp~ are not the
-   equivalent ~return~ and ~ap~ of any Monad.
+   equivalent ~return~ and ~ap~ of any ~Monad~.
 
 *** Laws
     #+BEGIN_SRC text :tangle "./slides/src/laws.txt"
@@ -247,7 +248,7 @@ class EqProp a where
     function ~quickBatch~ with a trigger data (which is not going to be
     evaluated). Example:
 
-    #+BEGIN_SRC haskell :tangle "./slides/src/ListInstance.hs"
+    #+BEGIN_SRC haskell :tangle "./slides/src/trigger.hs"
 trigger = undefined :: Pair (String, Int, Bool)
 
 main :: IO ()
@@ -268,14 +269,14 @@ applicative:
     ~quickBatch~ function, we use the ~applicative~ function (located
     in ~QuickCheck.Classes~) so the testing function knows what kind
     of test we can perform. We can also use this library to test the
-    laws of our Monoids, Functors and Monads.
+    laws of our ~Monoids~, ~Functors~ and ~Monads~.
 
 ** Traversing data structures
 
    If we take a look again at ~sequence~ and ~transpose~ and their
    types:
 
-   #+BEGIN_SRC haskell
+   #+BEGIN_SRC haskell :tangle "./slides/src/trav_typ.hs"
 sequence :: [IO a] -> IO [a]
 
 transpose :: [[a]] -> [[a]]
@@ -316,15 +317,15 @@ traverse f (x:xs) = pure (:) <*> (f x) <*> (traverse f xs)
 
    #+BEGIN_SRC haskell :tangle "./slides/src/traversable.hs"
 class Traversable t where
-  traverse :: Applicative f => (a -> f b) -> t a     -> f (t b)
-  dist     :: Applicative f =>               t (f a) -> f (t b)
+  traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
+  dist     :: Applicative f => t (f a) -> f (t b)
   dist     = traverse id
    #+END_SRC
 
    If we define an ~Id~ functor we can implement the ~fmap~ function
    with the ~Traversable~ type class.
 
-   #+BEGIN_SRC haskell :tangle "./slides/src/traversable_fmap.h"
+   #+BEGIN_SRC haskell :tangle "./slides/src/traversable_fmap.hs"
 fmap f = an . traverse (An . f)
    #+END_SRC
 
@@ -334,9 +335,10 @@ fmap f = an . traverse (An . f)
 newtype Id a = An { an :: a }
    #+END_SRC
 
-   dist-like operators can for regular functors which are datatype
-   constructors with one parameter, constructed by recursive sums of
-   products. Another example of ~Traversable~ functor is ~Tree~:
+   dist-like operators can be defined for regular functors which their
+   datatype constructors has one parameter, constructed by recursive
+   sums of products. Another example of ~Traversable~ functor is
+   ~Tree~:
 
    #+BEGIN_SRC haskell :tangle "./slides/src/Traversable_tree.hs"
 data Tree a = Leaf | Node (Tree a) a (Tree a)
@@ -399,6 +401,72 @@ concat = reduce
    #+END_SRC
 
 ** Applicative versus Monad?
+
+   As we have seen before, every ~Monad~ can be made ~Applicative~
+   with the ~return~ and ~ap~ functions, as we see with the ~IO~
+   example. However the list applicative we have defined is not
+   monadic.
+
+   So we know that we have more ~Applicative~ functors than ~Monads~
+
+   This does not mean that we have to forget about monads, there are
+   few of them because they are a more concrete structure so they are
+   still more powerful.
+
+   we can see that the bind operator:
+
+#+BEGIN_SRC haskell :tangle "./slides/src/bind.hs"
+(>>=) :: ma -> (a m b) -> m b
+#+END_SRC
+
+   can have an effect on the next computation, whereas ~<*>~ just keep
+   the computation fixed, sequencing effects.
+
+TODO
+
+*** Composing applicative functors
+
+    Applicative functors are easier to compose than monads
+
+#+BEGIN_SRC haskell :tangle "./slides/src/composition.hs"
+newtype (f :.: g) a = Comp { comp :: (f (g a))}
+
+instance (Applicative f, Applicative g) => Applicative (f :.: g) where
+  pure x                  = Comp pure <*> (pure x)
+  (Comp fs) <*> (Comp xs) = Comp pure (<*>) fs xs
+#+END_SRC
+
+    So the composition of two applicatives is also an
+    aplicative. While this does not happen with Monads, what we
+    certainly get is, if we compose two monads we get at least an
+    Applicative.
+
+TODO
+
+*** Accumulating exceptions
+
+    We will define a type to model exceptions:
+
+#+BEGIN_SRC haskell :tangle "./slides/src/Except.hs"
+data Except err a = OK a | Failed err
+#+END_SRC
+
+    If we use a ~Monad~ instance for this, it will abort once the
+    computation fails, however we can define the ~Applicative~
+    instance as:
+
+#+BEGIN_SRC haskell :tangle "./slides/src/ExceptApplicative.hs"
+instance Monoid err => Applicative (Except err) where
+  pure                           = OK
+  (OK f) <*> (OK x)              = OK (f x)
+  (OK f) <*> (Failed err)        = Failed err
+  (Failed err) <*> (OK x)        = Failed err
+  (Failed err) <*> (Failed err') = Failed (err <> err')
+#+END_SRC
+
+    so in this way we can collect errors using the list monoid for
+    example.
+
 ** Applicative functors, categorically
 ** Conclusions
 ** References
